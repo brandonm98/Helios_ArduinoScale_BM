@@ -7,7 +7,10 @@ byte tara;
 const int calVal_eepromAdress = 0;
 float newCalibrationValue;
 long t;
-HX711_ADC LoadCell(2, 3); // DT, SCK
+char buffer[100];
+unsigned long w;
+
+HX711_ADC LoadCell(4, 5); // DT, SCK
 String incomingString;
 ////////////////////////////////////////////
 void reset()
@@ -20,12 +23,11 @@ void reset()
 ////////////////////////////////////////////
 void sensores()
 {
-    if (millis() > t + 100)
+    if (millis() > t + 10)
     {
         LoadCell.update();
-        long i = LoadCell.getData();
-        char buffer[100];
-        sprintf(buffer, "peso:%ld", i);
+        w = LoadCell.getData();
+        sprintf(buffer, "peso:%ld", w);
         Serial.println(buffer);
         t = millis();
     }
@@ -110,7 +112,6 @@ void loop()
             while (LoadCell.getTareStatus())
             {
             }
-            delay(3000);
             Serial.println("Tare complete");
         }
         else
