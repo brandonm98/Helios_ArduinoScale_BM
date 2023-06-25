@@ -23,7 +23,7 @@ void reset()
 ////////////////////////////////////////////
 void sensores()
 {
-    if (millis() > t + 10)
+    if (millis() > t + 100)
     {
         LoadCell.update();
         w = LoadCell.getData();
