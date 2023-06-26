@@ -89,7 +89,7 @@ void setup()
     Serial.println("Cal val:");
     Serial.println(newCalibrationValue);
     LoadCell.setCalFactor(newCalibrationValue); // user set calibration factor (float)
-    LoadCell.setSamplesInUse(4);
+    LoadCell.setSamplesInUse(3);
     Serial.println("Startup + calibration is complete");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
