@@ -7,17 +7,15 @@ byte tara;
 const int calVal_eepromAdress = 0;
 float newCalibrationValue;
 long t;
-char buffer[100];
+char buffer[50];
 unsigned long w;
 
 HX711_ADC LoadCell(2, 3); // DT, SCK
-String incomingString;
 ////////////////////////////////////////////
 void reset()
 {
     flag4 = 0; // SERIAL COM
     tara = 13;
-    incomingString = "";
     delay(120);
 }
 ////////////////////////////////////////////
