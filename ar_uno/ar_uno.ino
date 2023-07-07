@@ -86,6 +86,9 @@ void setup()
     // time to calibrate load cell
     long stabilisingtime = 5000;
     LoadCell.start(stabilisingtime);
+    while(!Serial){
+        ;
+    }
     Serial.println("Cal val:");
     Serial.println(newCalibrationValue);
     LoadCell.setCalFactor(newCalibrationValue); // user set calibration factor (float)
