@@ -1,23 +1,20 @@
 #include <HX711_ADC.h>
 #include <EEPROM.h>
 
-int i;
 int flag4 = 0; // SERIAL COM
 byte tara;
 const int calVal_eepromAdress = 0;
 float newCalibrationValue;
 long t;
-char buffer[100];
+char buffer[50];
 unsigned long w;
-
 HX711_ADC LoadCell(4, 5); // DT, SCK
-String incomingString;
 ////////////////////////////////////////////
+
 void reset()
 {
     flag4 = 0; // SERIAL COM
     tara = 13;
-    incomingString = "";
     delay(120);
 }
 ////////////////////////////////////////////
@@ -111,7 +108,6 @@ void loop()
         // tara == 't' in ascii code
         if (tara == 116)
         {
-            int i = 0;
             LoadCell.tareNoDelay();
             while (LoadCell.getTareStatus())
             {
