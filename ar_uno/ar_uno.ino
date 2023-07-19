@@ -91,6 +91,7 @@ void setup()
     Serial.print("HX711 measured sampling rate HZ: ");
     Serial.println(LoadCell.getSPS());
     LoadCell.setCalFactor(newCalibrationValue); // user set calibration factor (float)
+    LoadCell.setSamplesInUse(3);
     Serial.println("Startup + calibration is complete");
 }
 
