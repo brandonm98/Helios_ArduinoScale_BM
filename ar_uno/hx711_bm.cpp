@@ -310,14 +310,13 @@ long HX711_ADC::smoothedData()
 		#endif
 		data_past += dataSampleSet[r];
 	}
-  data_new = dataSampleSet[samplesInUse + IGN_HIGH_SAMPLE + IGN_LOW_SAMPLE];
+  	data_new = dataSampleSet[samplesInUse + IGN_HIGH_SAMPLE + IGN_LOW_SAMPLE];
 	#if IGN_LOW_SAMPLE 
 	data_past -= L; //remove lowest value
 	#endif
 	#if IGN_HIGH_SAMPLE 
 	data_past -= H; //remove highest value
 	#endif
-	//return data;
 	return ((float)(data_past >> (divBit - 1)) * 0.99) + 0.01 * (float) data_new;
 }
 
