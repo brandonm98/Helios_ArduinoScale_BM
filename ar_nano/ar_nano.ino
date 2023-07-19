@@ -1,35 +1,32 @@
-#include <HX711_ADC.h>
-#include <EEPROM.h>
 
-int flag4 = 0; // SERIAL COM
-byte tara;
+#include <EEPROM.h>
+#include "hx711_bm.h"
+
+static boolean newDataReady = 0;
+const int serialPrintInterval = 100; // increase value to slow down serial print activity
+byte rx_bt;
 const int calVal_eepromAdress = 0;
 float newCalibrationValue;
-long t;
+unsigned long t;
 char buffer[50];
-unsigned long w;
 HX711_ADC LoadCell(4, 5); // DT, SCK
-////////////////////////////////////////////
 
 void reset()
 {
-    flag4 = 0; // SERIAL COM
-    tara = 13;
-    delay(120);
+    rx_bt = 13;
 }
-////////////////////////////////////////////
+
 void sensores()
 {
-    if (millis() > t + 100)
+    if (newDataReady && millis() > t + 100)
     {
-        LoadCell.update();
-        w = LoadCell.getData();
-        sprintf(buffer, "peso:%ld", w);
+        float i = LoadCell.getData();
+        sprintf(buffer, "peso:%ld", (long)i);
         Serial.println(buffer);
         t = millis();
     }
 }
-////////////////////////////////////////////
+
 void calibrate()
 {
     Serial.println("***");
@@ -70,7 +67,7 @@ void calibrate()
     Serial.println(calVal_eepromAdress);
     Serial.println("End calibration");
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void setup()
 {
     Serial.begin(9600);
@@ -81,42 +78,44 @@ void setup()
     }
     LoadCell.begin();
     // time to calibrate load cell
-    long stabilisingtime = 5000;
+    long stabilisingtime = 10000;
     LoadCell.start(stabilisingtime);
-    while(!Serial){
+    while (!Serial)
+    {
         ;
     }
     Serial.println("Cal val:");
     Serial.println(newCalibrationValue);
+    Serial.print("HX711 measured settlingtime ms: ");
+    Serial.println(LoadCell.getSettlingTime());
+    Serial.print("HX711 measured sampling rate HZ: ");
+    Serial.println(LoadCell.getSPS());
     LoadCell.setCalFactor(newCalibrationValue); // user set calibration factor (float)
     LoadCell.setSamplesInUse(3);
     Serial.println("Startup + calibration is complete");
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void loop()
 {
-    if (flag4 == 0)
-    {
-        sensores();
-    }
+    if (LoadCell.update())
+        newDataReady = true;
 
-    ///////////////TARA
+    sensores();
 
     if (Serial.available())
     {
-        byte tara = Serial.read();
-        // tara == 't' in ascii code
-        if (tara == 116)
+        byte rx_bt = Serial.read();
+        if (rx_bt == 116)
         {
             LoadCell.tareNoDelay();
-            while (LoadCell.getTareStatus())
+            if (LoadCell.getTareStatus())
             {
+                Serial.println("Tare complete");
             }
-            Serial.println("Tare complete");
         }
         else
         {
-            if (tara == 99)
+            if (rx_bt == 99)
             {
                 calibrate();
             }
