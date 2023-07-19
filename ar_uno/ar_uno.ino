@@ -78,7 +78,7 @@ void setup()
     }
     LoadCell.begin();
     // time to calibrate load cell
-    long stabilisingtime = 5000;
+    long stabilisingtime = 10000;
     LoadCell.start(stabilisingtime);
     while (!Serial)
     {
@@ -91,7 +91,6 @@ void setup()
     Serial.print("HX711 measured sampling rate HZ: ");
     Serial.println(LoadCell.getSPS());
     LoadCell.setCalFactor(newCalibrationValue); // user set calibration factor (float)
-    LoadCell.setSamplesInUse(3);
     Serial.println("Startup + calibration is complete");
 }
 
