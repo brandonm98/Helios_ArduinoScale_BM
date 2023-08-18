@@ -5,9 +5,9 @@ import numpy as np
 import json
 
 # Pin definition
-RST_PIN = 17
-CS_PIN = 22
-DRDY_PIN = 27
+RST_PIN = 26
+CS_PIN = 27
+DRDY_PIN = 22
 
 SPI = spidev.SpiDev(0, 0)
 
