@@ -1,8 +1,10 @@
 import RPi.GPIO as GPIO
 import spidev
 import time
-import numpy as np
 import json
+from DigitalFilter.DigitalFilter import LPF
+
+filter_s = LPF(1, [1], "lowpass",design="butter", fs=7500)
 
 # Pin definition
 RST_PIN = 26
@@ -26,16 +28,15 @@ def spi_writebyte(data):
 def spi_readbytes(reg):
     return SPI.readbytes(reg)
     
-
 def module_init():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     GPIO.setup(RST_PIN, GPIO.OUT)
     GPIO.setup(CS_PIN, GPIO.OUT)
     GPIO.setup(DRDY_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    SPI.max_speed_hz = 1953125
+    SPI.max_speed_hz = 2000000
     SPI.mode = 0b01
-    return 0;
+    return 0
 
 # gain channel
 ADS1256_GAIN_E = {'ADS1256_GAIN_1' : 0, # GAIN   1
@@ -108,6 +109,7 @@ class ADS1256:
         self.off_count = 0
         self.print_time = time.time()
         self.cal_time = time.time()
+        self.DEBUG_SIGNAL = False
         try:
             with open("config.json", "r") as f:
                 self.SCALE = float(json.load(f)["calFactor"])
@@ -142,14 +144,12 @@ class ADS1256:
         return data
         
     def ADS1256_WaitDRDY(self):
-        for i in range(0,400000,1):
-            if(digital_read(self.drdy_pin) == 0):
-                
-                break
-        if(i >= 400000):
-            print ("Time Out ...\r\n")
-        
-        
+        p = time.time()
+        while digital_read(self.drdy_pin):
+            if(time.time() - p > 10):
+                print ("Time Out ...\r\n")
+                pass
+            
     def ADS1256_ReadChipID(self):
         self.ADS1256_WaitDRDY()
         id = self.ADS1256_Read_data(REG_E['REG_STATUS'])
@@ -181,21 +181,14 @@ class ADS1256:
         if read & (1 << 23) !=0:
             read = (~read) - 1
         read += 1 << 24
-        read = read >> 4
+        read = read >> 0
         return read - self.OFFSET
         
     def raw_read(self, times):
-        ac = 0.0
-        L = 1 << 24
-        H = - 1 << 24
+        out_data = []
         for i in range(times):
-            out_data = self._raw_read()
-            ac += out_data
-            L = out_data if out_data < L else L
-            H = out_data if out_data > H else H
-        ac -= L
-        ac -= H
-        return ac // (times - 2)
+            out_data.append(self._raw_read())
+        return sum(out_data)/times
     
     def units_read(self, times):
         return self.raw_read(times)/self.SCALE
@@ -211,7 +204,7 @@ class ADS1256:
             
     def calculate_offset(self):
         self.OFFSET = 0
-        self.OFFSET = self.raw_read(500)
+        self.OFFSET = self.raw_read(7500)
         print("OFFSET calibration = ", self.OFFSET)
     
     def offset_gain_calibration(self):
@@ -221,22 +214,22 @@ class ADS1256:
         print("CALIBRATION DONE!!")
     
     def stable_result(self, set_hysteresis=False):
-        ws = self.units_read(200)
+        ws = self.units_read(1)
+        ws = filter_s.filter(ws)
         ws -= self.tare_weight
         
-        if ws > self.SETPOINT + 100:
+        if ws > self.SETPOINT + 1:
             self.SETPOINT = ws
         else:
-            if ws < self.SETPOINT -160:
+            if ws < self.SETPOINT - 1.5:
                 self.SETPOINT = ws
-        self.SETPOINT = 0 if self.SETPOINT <= 120 else self.SETPOINT
-        if self.tare_weight < 100 and ws < 100:
+
+        self.SETPOINT = 0 if self.SETPOINT <= 0.5 else self.SETPOINT
+        if self.tare_weight < 0.5 and ws < 0.5:
             self.tare_weight = 0
             self.off_count += 1
         else:
             self.off_count = 0
-        if (time.time() - self.print_time)//1000 > 100:
-            self.print_time = time.time()
         if time.time() - self.cal_time > 60 and self.off_count >= 15:
             self.offset_gain_calibration()
             self.calculate_offset()
@@ -249,19 +242,19 @@ class ADS1256:
         print("SET REGISTERS")
         self.ADS1256_WriteReg(REG_E["REG_STATUS"], 0b00000010)
         print(bin(self.ADS1256_Read_data(REG_E["REG_STATUS"])[0]))
-        self.ADS1256_WriteReg(REG_E["REG_DRATE"], ADS1256_DRATE_E["ADS1256_2000SPS"])
+        self.ADS1256_WriteReg(REG_E["REG_DRATE"], ADS1256_DRATE_E["ADS1256_7500SPS"])
         print(bin(self.ADS1256_Read_data(REG_E["REG_DRATE"])[0]))
-        self.ADS1256_WriteReg(REG_E["REG_ADCON"], 0b00100011)
+        self.ADS1256_WriteReg(REG_E["REG_ADCON"], 0b00100111)
         print(bin(self.ADS1256_Read_data(REG_E["REG_ADCON"])[0]))
         self.ADS1256_WriteReg(REG_E["REG_MUX"], 0b00000001)
         print(bin(self.ADS1256_Read_data(REG_E["REG_MUX"])[0]))
         delay_ms(500)
-        self.offset_gain_calibration()
         self.start(10)
+        self.offset_gain_calibration()
         self.calculate_offset()
     
     def set_tare_weight(self):
-        self.tare_weight = self.units_read(1000)
+        self.tare_weight = self.units_read(7500)
     
     def prepare_calibration(self):
         self.SCALE = 1.0
@@ -270,7 +263,7 @@ class ADS1256:
     
     def calibrate_weight_scale(self, known_mass):
         print("known mass is: {}".format(known_mass))
-        raw_value = self.raw_read(1000)
+        raw_value = self.raw_read(7500)
         if raw_value != 0:
             self.SCALE = raw_value / known_mass
         else:
@@ -278,11 +271,3 @@ class ADS1256:
         with open("config.json", "w") as f:
             json.dump({"calFactor": self.SCALE}, f)
         print("new cal factor: {}".format(self.SCALE))
-        
-        
-        
-            
-            
-            
-            
-        
