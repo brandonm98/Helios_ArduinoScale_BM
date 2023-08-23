@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import spidev
 import time
 import json
-from DigitalFilter.DigitalFilter import LPF
+from .DigitalFilter import LPF
 
 filter_s = LPF(1, [1], "lowpass",design="butter", fs=7500)
 
